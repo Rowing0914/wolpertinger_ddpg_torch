@@ -22,6 +22,7 @@ class WolpertingerAgent(DDPG):
         else:
             self.action_space = action_space.Discrete_space(max_actions)
             self.k_nearest_neighbors = max(1, int(max_actions * k_ratio))
+        self.k_nearest_neighbors = 5
 
     def get_name(self):
         return 'Wolp3_{}k{}_{}'.format(self.action_space.get_number_of_actions(),
@@ -80,9 +81,11 @@ class WolpertingerAgent(DDPG):
 
     def select_target_action(self, s_t):
         proto_action = self.actor_target(s_t)
+        print(proto_action.shape)  # 64 x 1
         proto_action = to_numpy(torch.clamp(proto_action, -1.0, 1.0), gpu_used=self.gpu_used)
 
         raw_wolp_action, wolp_action = self.wolp_action(s_t, proto_action)
+        print(raw_wolp_action.shape, wolp_action.shape)  # 64 x 1, 64 x 1
         return raw_wolp_action
 
     def update_policy(self):
@@ -94,8 +97,8 @@ class WolpertingerAgent(DDPG):
         # the operation below of critic_target does not require backward_P
         next_state_batch = to_tensor(next_state_batch, volatile=True, gpu_used=self.gpu_used, gpu_0=self.gpu_ids[0])
         next_wolp_action_batch = self.select_target_action(next_state_batch)
-        # print(next_state_batch.shape)
-        # print(next_wolp_action_batch.shape)
+        print(next_state_batch.shape)  # 64 x 3
+        print(next_wolp_action_batch.shape)  # 64 x 1
         next_q_values = self.critic_target([
             next_state_batch,
             to_tensor(next_wolp_action_batch, volatile=True, gpu_used=self.gpu_used, gpu_0=self.gpu_ids[0]),
